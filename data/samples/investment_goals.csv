@@ -1,0 +1,8 @@
+name,goal_type,target_amount,current_amount,monthly_contribution,target_date,priority,notes
+Emergency Fund,emergency_fund,300000,85000,10000,2025-12-31,1,6 months of expenses as safety net
+Home Down Payment,home_purchase,2500000,150000,15000,2028-06-30,2,30% down for 2BHK in Bengaluru
+Retirement Corpus,retirement,20000000,500000,5000,2050-01-01,3,Target 25x annual expenses by age 60
+International Trip,travel,200000,40000,8000,2025-10-01,4,Europe trip with family
+Children Education,education,3000000,200000,10000,2035-06-01,2,Child's higher education fund
+Zerodha Equity Portfolio,wealth_building,1000000,120000,5000,,3,Long-term equity wealth building via SIP
+Car Purchase,vehicle,800000,200000,20000,2026-03-01,5,Upgrade to electric vehicle

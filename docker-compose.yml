@@ -1,0 +1,26 @@
+services:
+  finance-agent:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+      - ./.env:/app/.env:ro
+      - ./credentials.json:/app/credentials.json:ro   # Gmail OAuth (optional)
+      # Vertex AI service account key (if not using Workload Identity):
+      # - ./sa-key.json:/app/sa-key.json:ro
+    environment:
+      - CHROMA_PERSIST_PATH=/app/data/chroma_db
+      - GMAIL_TOKEN_PATH=/app/data/gmail_token.json
+      # Vertex AI — override if not using .env file
+      # - VERTEX_PROJECT=my-gcp-project-id
+      # - VERTEX_LOCATION=us-east5
+      # - LLM_MODEL=claude-opus-4-7
+      # Service account auth (uncomment if not using Workload Identity):
+      # - GOOGLE_APPLICATION_CREDENTIALS=/app/sa-key.json
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
