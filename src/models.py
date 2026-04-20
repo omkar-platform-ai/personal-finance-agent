@@ -70,6 +70,7 @@ class Transaction(BaseModel):
     description: str
     amount: float                          # always positive
     transaction_type: TransactionType
+    currency: str = "INR"                  # ISO 4217 code
     category: TransactionCategory = TransactionCategory.OTHER
     subcategory: str | None = None
     merchant: str | None = None
