@@ -88,13 +88,15 @@ version-current:
 
 release-dry:
 	@echo "→ Next version (based on commits since last tag):"
-	uv run semantic-release version --print --no-commit --no-tag --no-push --no-vcs-release
-	@echo ""
-	@echo "→ CHANGELOG entry preview:"
-	uv run semantic-release changelog --print
+	@uv run semantic-release version --print --no-commit --no-tag --no-push --no-vcs-release
 
 changelog-preview:
-	uv run semantic-release changelog --print
+	@echo "→ Regenerating CHANGELOG.md locally (not committed)..."
+	@uv run semantic-release version --no-commit --no-tag --no-push --no-vcs-release --skip-build >/dev/null 2>&1 || true
+	@echo "→ Diff of the proposed release changes:"
+	@git --no-pager diff CHANGELOG.md pyproject.toml || true
+	@echo ""
+	@echo "→ Revert preview with: git checkout -- CHANGELOG.md pyproject.toml"
 
 release-local:
 	@if [ -z "$$GH_TOKEN" ] && [ -z "$$GITHUB_TOKEN" ]; then \
