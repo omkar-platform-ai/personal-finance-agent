@@ -1,8 +1,10 @@
 name: Release
 
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
     branches: [main]
+    types: [completed]
 
 concurrency:
   group: release
@@ -12,7 +14,9 @@ jobs:
   release:
     name: Semantic Release
     runs-on: ubuntu-latest
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      !contains(github.event.workflow_run.head_commit.message, '[skip ci]')
 
     permissions:
       contents: write
@@ -25,10 +29,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Force correct release branch
-        run: git checkout -B ${{ github.ref_name }} ${{ github.sha }}
+        run: git checkout -B ${{ github.event.workflow_run.head_branch }} ${{ github.event.workflow_run.head_sha }}
 
       - name: Python Semantic Release
         id: release
