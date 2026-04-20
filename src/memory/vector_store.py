@@ -5,6 +5,7 @@ ChromaDB-backed vector store for transactions, goals, and insights.
 Supports semantic search so the conversational agent can answer questions
 like "What did I spend on food last month?" with grounded context.
 """
+
 from __future__ import annotations
 
 # Silence transformers / langchain deprecation noise *before* the offending
@@ -14,10 +15,8 @@ from src._silence import silence_noisy_libraries
 
 silence_noisy_libraries()
 
-import json
 import logging
 import os
-from datetime import date
 from typing import Any
 
 import chromadb
@@ -48,6 +47,7 @@ def _get_embeddings():
         )
     # Fallback: local sentence-transformers (no API key needed)
     from langchain_community.embeddings import HuggingFaceEmbeddings
+
     return HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
 
 
@@ -84,21 +84,23 @@ class FinanceVectorStore:
                 f"₹{tx.amount:,.2f} | {tx.merchant or tx.description} | "
                 f"Category: {tx.category.value} | {tx.subcategory or ''}"
             )
-            docs.append(Document(
-                page_content=text,
-                metadata={
-                    "id": tx.id,
-                    "date": str(tx.date),
-                    "year": tx.date.year,
-                    "month": tx.date.month,
-                    "amount": tx.amount,
-                    "type": tx.transaction_type.value,
-                    "category": tx.category.value,
-                    "merchant": tx.merchant or "",
-                    "account": tx.account or "",
-                    "source": tx.source_file or "",
-                },
-            ))
+            docs.append(
+                Document(
+                    page_content=text,
+                    metadata={
+                        "id": tx.id,
+                        "date": str(tx.date),
+                        "year": tx.date.year,
+                        "month": tx.date.month,
+                        "amount": tx.amount,
+                        "type": tx.transaction_type.value,
+                        "category": tx.category.value,
+                        "merchant": tx.merchant or "",
+                        "account": tx.account or "",
+                        "source": tx.source_file or "",
+                    },
+                )
+            )
 
         vectorstore = Chroma(
             collection_name=COLLECTION_TRANSACTIONS,
@@ -174,18 +176,20 @@ class FinanceVectorStore:
                 f"Target date: {goal.target_date or 'not set'} | "
                 f"Priority: {goal.priority} | {goal.notes or ''}"
             )
-            docs.append(Document(
-                page_content=text,
-                metadata={
-                    "id": goal.id,
-                    "name": goal.name,
-                    "goal_type": goal.goal_type.value,
-                    "target_amount": goal.target_amount,
-                    "current_amount": goal.current_amount,
-                    "monthly_contribution": goal.monthly_contribution,
-                    "priority": goal.priority,
-                },
-            ))
+            docs.append(
+                Document(
+                    page_content=text,
+                    metadata={
+                        "id": goal.id,
+                        "name": goal.name,
+                        "goal_type": goal.goal_type.value,
+                        "target_amount": goal.target_amount,
+                        "current_amount": goal.current_amount,
+                        "monthly_contribution": goal.monthly_contribution,
+                        "priority": goal.priority,
+                    },
+                )
+            )
 
         vectorstore = Chroma(
             collection_name=COLLECTION_GOALS,
@@ -213,6 +217,7 @@ class FinanceVectorStore:
             client=self._client,
         )
         import uuid
+
         vectorstore.add_documents(
             [Document(page_content=insight_text, metadata=metadata or {})],
             ids=[str(uuid.uuid4())],

@@ -3,6 +3,7 @@ src/models.py
 ─────────────────────────────────────────────────────────────────────────────
 All Pydantic v2 models for the finance coach agent.
 """
+
 from __future__ import annotations
 
 from datetime import date, datetime
@@ -11,8 +12,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
-
 # ─── Enums ────────────────────────────────────────────────────────────────────
+
 
 class TransactionCategory(str, Enum):
     FOOD_DINING = "food_dining"
@@ -64,20 +65,21 @@ class GoalStatus(str, Enum):
 
 # ─── Transaction ──────────────────────────────────────────────────────────────
 
+
 class Transaction(BaseModel):
     id: str
     date: date
     description: str
-    amount: float                          # always positive
+    amount: float  # always positive
     transaction_type: TransactionType
-    currency: str = "INR"                  # ISO 4217 code
+    currency: str = "INR"  # ISO 4217 code
     category: TransactionCategory = TransactionCategory.OTHER
     subcategory: str | None = None
     merchant: str | None = None
     account: str | None = None
     source_file: str | None = None
-    raw_text: str | None = None            # original unparsed row
-    confidence: float = 1.0               # LLM categorisation confidence
+    raw_text: str | None = None  # original unparsed row
+    confidence: float = 1.0  # LLM categorisation confidence
 
     @field_validator("amount")
     @classmethod
@@ -92,17 +94,21 @@ class Transaction(BaseModel):
 class TransactionBatch(BaseModel):
     transactions: list[Transaction]
     source_name: str
-    source_type: str                       # "csv" | "pdf" | "gmail"
+    source_type: str  # "csv" | "pdf" | "gmail"
     account_holder: str | None = None
     parsed_at: datetime = Field(default_factory=datetime.now)
 
     @property
     def total_debits(self) -> float:
-        return sum(t.amount for t in self.transactions if t.transaction_type == TransactionType.DEBIT)
+        return sum(
+            t.amount for t in self.transactions if t.transaction_type == TransactionType.DEBIT
+        )
 
     @property
     def total_credits(self) -> float:
-        return sum(t.amount for t in self.transactions if t.transaction_type == TransactionType.CREDIT)
+        return sum(
+            t.amount for t in self.transactions if t.transaction_type == TransactionType.CREDIT
+        )
 
     @property
     def net_cashflow(self) -> float:
@@ -111,15 +117,16 @@ class TransactionBatch(BaseModel):
 
 # ─── Investment Goal ──────────────────────────────────────────────────────────
 
+
 class InvestmentGoal(BaseModel):
     id: str
     name: str
     goal_type: GoalType
     target_amount: float
     current_amount: float = 0.0
-    monthly_contribution: float = 0.0     # user's planned monthly investment
+    monthly_contribution: float = 0.0  # user's planned monthly investment
     target_date: date | None = None
-    priority: int = 1                     # 1 = highest priority
+    priority: int = 1  # 1 = highest priority
     notes: str | None = None
 
     @property
@@ -134,6 +141,7 @@ class InvestmentGoal(BaseModel):
 
 
 # ─── Budget ───────────────────────────────────────────────────────────────────
+
 
 class CategoryBudget(BaseModel):
     category: TransactionCategory
@@ -157,20 +165,21 @@ class CategoryBudget(BaseModel):
 
 # ─── Analysis Results ─────────────────────────────────────────────────────────
 
+
 class SpendingInsight(BaseModel):
     title: str
     description: str
-    impact: str                            # "high" | "medium" | "low"
-    action: str | None = None             # recommended action
+    impact: str  # "high" | "medium" | "low"
+    action: str | None = None  # recommended action
     amount_involved: float | None = None
 
 
 class GoalCorrelation(BaseModel):
     goal: InvestmentGoal
     status: GoalStatus
-    monthly_surplus_available: float      # what's left after expenses
+    monthly_surplus_available: float  # what's left after expenses
     recommended_contribution: float
-    gap: float                            # difference vs planned contribution
+    gap: float  # difference vs planned contribution
     insights: list[str]
     months_to_goal: int | None = None
 
@@ -190,8 +199,10 @@ class FinancialSummary(BaseModel):
 
 # ─── Agent State (LangGraph) ──────────────────────────────────────────────────
 
+
 class AgentState(BaseModel):
     """Shared state across all LangGraph nodes."""
+
     messages: list[dict[str, str]] = Field(default_factory=list)
     transactions: list[Transaction] = Field(default_factory=list)
     goals: list[InvestmentGoal] = Field(default_factory=list)

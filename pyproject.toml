@@ -65,7 +65,16 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]
-ignore = ["E501"]
+# E501: line length — enforced by `ruff format`, not the linter.
+# UP042: prefer `StrEnum` over `(str, Enum)` — project intentionally uses the
+#   older pattern; migrating would alter `str(member)` output and enum value
+#   handling, which is out of scope for lint cleanup.
+ignore = ["E501", "UP042"]
+
+[tool.ruff.lint.per-file-ignores]
+# vector_store.py intentionally calls silence_noisy_libraries() before
+# importing chromadb/langchain to suppress their deprecation warnings.
+"src/memory/vector_store.py" = ["E402"]
 
 [tool.mypy]
 python_version = "3.11"

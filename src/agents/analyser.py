@@ -7,6 +7,7 @@ Financial analysis engine:
   • Investment goal correlation and gap analysis
   • Insight generation (LLM-powered)
 """
+
 from __future__ import annotations
 
 import json
@@ -129,14 +130,11 @@ class FinancialAnalyser:
         transactions: list[Transaction],
     ) -> list[dict[str, Any]]:
         """Find likely recurring charges (same merchant, similar amount, monthly)."""
-        from collections import Counter
 
         merchant_months: dict[str, list[tuple[int, int, float]]] = defaultdict(list)
         for tx in transactions:
             if tx.transaction_type == TransactionType.DEBIT and tx.merchant:
-                merchant_months[tx.merchant].append(
-                    (tx.date.year, tx.date.month, tx.amount)
-                )
+                merchant_months[tx.merchant].append((tx.date.year, tx.date.month, tx.amount))
 
         recurring = []
         for merchant, entries in merchant_months.items():
@@ -145,12 +143,14 @@ class FinancialAnalyser:
                 avg = sum(amounts) / len(amounts)
                 variance = max(abs(a - avg) / avg for a in amounts) if avg > 0 else 1
                 if variance < 0.1:  # within 10% = likely subscription
-                    recurring.append({
-                        "merchant": merchant,
-                        "monthly_amount": round(avg, 2),
-                        "annual_cost": round(avg * 12, 2),
-                        "occurrences": len(entries),
-                    })
+                    recurring.append(
+                        {
+                            "merchant": merchant,
+                            "monthly_amount": round(avg, 2),
+                            "annual_cost": round(avg * 12, 2),
+                            "occurrences": len(entries),
+                        }
+                    )
         return sorted(recurring, key=lambda x: x["monthly_amount"], reverse=True)
 
     # ── Budget tracking ───────────────────────────────────────────────────────
@@ -175,7 +175,8 @@ class FinancialAnalyser:
                     actual_spent=amount,
                 )
                 for cat, amount in category_spend.items()
-                if cat not in (
+                if cat
+                not in (
                     TransactionCategory.SALARY_INCOME.value,
                     TransactionCategory.OTHER_INCOME.value,
                     TransactionCategory.INVESTMENTS.value,
@@ -254,15 +255,17 @@ class FinancialAnalyser:
             if recommended > 0 and goal.remaining_amount > 0:
                 months_to_goal = int(goal.remaining_amount / recommended)
 
-            correlations.append(GoalCorrelation(
-                goal=goal,
-                status=status,
-                monthly_surplus_available=monthly_surplus,
-                recommended_contribution=round(recommended, 2),
-                gap=round(gap, 2),
-                insights=llm_data.get("insights", []),
-                months_to_goal=months_to_goal,
-            ))
+            correlations.append(
+                GoalCorrelation(
+                    goal=goal,
+                    status=status,
+                    monthly_surplus_available=monthly_surplus,
+                    recommended_contribution=round(recommended, 2),
+                    gap=round(gap, 2),
+                    insights=llm_data.get("insights", []),
+                    months_to_goal=months_to_goal,
+                )
+            )
 
         return correlations
 
@@ -292,10 +295,12 @@ class FinancialAnalyser:
             planned_investments=f"{planned_investments:,.0f}",
         )
         try:
-            response = self._llm.invoke([
-                SystemMessage(content=prompt),
-                HumanMessage(content=json.dumps(goals_summary, ensure_ascii=False)),
-            ])
+            response = self._llm.invoke(
+                [
+                    SystemMessage(content=prompt),
+                    HumanMessage(content=json.dumps(goals_summary, ensure_ascii=False)),
+                ]
+            )
             raw = response.content.strip()
             raw = raw.replace("```json", "").replace("```", "").strip()
             return json.loads(raw)
@@ -322,11 +327,17 @@ class FinancialAnalyser:
 
         category_totals = self.aggregate_by_category(transactions)
         top_categories = [
-            {"category": cat, "amount": amt, "pct": (amt / total_expenses * 100) if total_expenses > 0 else 0}
+            {
+                "category": cat,
+                "amount": amt,
+                "pct": (amt / total_expenses * 100) if total_expenses > 0 else 0,
+            }
             for cat, amt in list(category_totals.items())[:8]
         ]
 
-        insights = self._generate_insights(transactions, category_totals, total_income, total_expenses)
+        insights = self._generate_insights(
+            transactions, category_totals, total_income, total_expenses
+        )
         goal_correlations = self.correlate_goals(transactions, goals)
 
         return FinancialSummary(
@@ -358,10 +369,12 @@ class FinancialAnalyser:
             "num_transactions": len(transactions),
         }
         try:
-            response = self._llm.invoke([
-                SystemMessage(content=INSIGHT_SYSTEM),
-                HumanMessage(content=json.dumps(spending_data, ensure_ascii=False)),
-            ])
+            response = self._llm.invoke(
+                [
+                    SystemMessage(content=INSIGHT_SYSTEM),
+                    HumanMessage(content=json.dumps(spending_data, ensure_ascii=False)),
+                ]
+            )
             raw = response.content.strip().replace("```json", "").replace("```", "")
             parsed = json.loads(raw)
             return [

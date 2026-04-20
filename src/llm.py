@@ -27,6 +27,7 @@ Note on temperature:
     deprecated for this model family. Temperature is only passed for
     Haiku/Sonnet models where it is still supported.
 """
+
 from __future__ import annotations
 
 import logging
@@ -38,8 +39,8 @@ from langchain_google_vertexai.model_garden import ChatAnthropicVertex
 logger = logging.getLogger(__name__)
 
 # ── Defaults ──────────────────────────────────────────────────────────────────
-_DEFAULT_MODEL  = "claude-opus-4-7"
-_DEFAULT_FAST   = "claude-haiku-4-5@20251001"
+_DEFAULT_MODEL = "claude-opus-4-7"
+_DEFAULT_FAST = "claude-haiku-4-5@20251001"
 _DEFAULT_MAXTOK = 4096
 
 # Models that do NOT accept temperature (Opus 4.x family)
@@ -54,7 +55,7 @@ def _supports_temperature(model_name: str) -> bool:
 def _vertex_project() -> str:
     project = os.getenv("VERTEX_PROJECT") or os.getenv("GOOGLE_CLOUD_PROJECT", "")
     if not project:
-        raise EnvironmentError(
+        raise OSError(
             "VERTEX_PROJECT env var is not set. "
             "Add it to your .env file: VERTEX_PROJECT=my-gcp-project-id"
         )
@@ -82,8 +83,8 @@ def get_llm(
     Automatically omits temperature for Opus 4.x models where it is deprecated.
     """
     chosen_model = model or os.getenv("LLM_MODEL", _DEFAULT_MODEL)
-    project      = _vertex_project()
-    location     = location or _vertex_location()
+    project = _vertex_project()
+    location = location or _vertex_location()
 
     kwargs: dict = dict(
         model_name=chosen_model,
@@ -97,12 +98,17 @@ def get_llm(
         kwargs["temperature"] = temperature
         logger.info(
             "Initialising ChatAnthropicVertex: model=%s project=%s location=%s temperature=%s",
-            chosen_model, project, location, temperature,
+            chosen_model,
+            project,
+            location,
+            temperature,
         )
     else:
         logger.info(
             "Initialising ChatAnthropicVertex: model=%s project=%s location=%s (no temperature)",
-            chosen_model, project, location,
+            chosen_model,
+            project,
+            location,
         )
 
     return ChatAnthropicVertex(**kwargs)

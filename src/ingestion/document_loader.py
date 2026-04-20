@@ -8,6 +8,7 @@ Ingests bank/credit card statements from:
 
 Returns a TransactionBatch for each source.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -37,17 +38,17 @@ logger = logging.getLogger(__name__)
 
 # ─── Prompts ──────────────────────────────────────────────────────────────────
 
-CATEGORISATION_SYSTEM = """You are a financial transaction categoriser.
+CATEGORISATION_SYSTEM = f"""You are a financial transaction categoriser.
 Given a list of bank/credit card transactions, return a JSON array where each
 element has:
   - "id": the transaction id passed in
-  - "category": one of {categories}
+  - "category": one of {[c.value for c in TransactionCategory]}
   - "subcategory": a short (1-3 word) specific label, e.g. "Swiggy delivery"
   - "merchant": cleaned merchant name (remove transaction codes, bank refs)
   - "confidence": float 0-1
 
 Return ONLY the JSON array, no markdown fences, no explanation.
-""".format(categories=[c.value for c in TransactionCategory])
+"""
 
 PDF_EXTRACTION_SYSTEM = """You are a bank statement parser.
 Extract ALL transactions from the text below. Return a JSON array where each element has:
@@ -70,6 +71,7 @@ Return ONLY the JSON object."""
 
 # ─── CSV Ingestion ────────────────────────────────────────────────────────────
 
+
 class CSVIngester:
     """Handles any CSV layout by using LLM to normalise column headers."""
 
@@ -85,10 +87,12 @@ class CSVIngester:
         ``row.get(mapping["debit_amount"])``. Null/empty mappings are dropped.
         """
         prompt = CSV_NORMALISE_SYSTEM.format(columns=columns)
-        response = self._llm.invoke([
-            SystemMessage(content=prompt),
-            HumanMessage(content=f"Columns: {columns}"),
-        ])
+        response = self._llm.invoke(
+            [
+                SystemMessage(content=prompt),
+                HumanMessage(content=f"Columns: {columns}"),
+            ]
+        )
         raw = response.content.strip()
         # Strip markdown fences if present
         raw = re.sub(r"```(?:json)?", "", raw).strip().rstrip("```")
@@ -98,8 +102,15 @@ class CSVIngester:
     def _parse_date(self, val: Any) -> date:
         if isinstance(val, date):
             return val
-        for fmt in ("%d/%m/%Y", "%m/%d/%Y", "%Y-%m-%d", "%d-%m-%Y",
-                    "%d %b %Y", "%d %B %Y", "%b %d, %Y"):
+        for fmt in (
+            "%d/%m/%Y",
+            "%m/%d/%Y",
+            "%Y-%m-%d",
+            "%d-%m-%Y",
+            "%d %b %Y",
+            "%d %B %Y",
+            "%b %d, %Y",
+        ):
             try:
                 return datetime.strptime(str(val).strip(), fmt).date()
             except ValueError:
@@ -171,6 +182,7 @@ class CSVIngester:
 
 # ─── PDF Ingestion ────────────────────────────────────────────────────────────
 
+
 class PDFIngester:
     """Extracts transactions from bank statement PDFs using pdfplumber + LLM."""
 
@@ -203,10 +215,12 @@ class PDFIngester:
         all_txns: list[dict[str, Any]] = []
 
         for chunk in chunks:
-            response = self._llm.invoke([
-                SystemMessage(content=PDF_EXTRACTION_SYSTEM),
-                HumanMessage(content=chunk),
-            ])
+            response = self._llm.invoke(
+                [
+                    SystemMessage(content=PDF_EXTRACTION_SYSTEM),
+                    HumanMessage(content=chunk),
+                ]
+            )
             raw = response.content.strip()
             raw = re.sub(r"```(?:json)?", "", raw).strip().rstrip("```")
             try:
@@ -248,9 +262,7 @@ class PDFIngester:
                     date=date_obj,
                     description=str(raw.get("description", "")).strip(),
                     amount=abs(float(raw.get("amount", 0))),
-                    transaction_type=TransactionType(
-                        raw.get("type", "debit").lower()
-                    ),
+                    transaction_type=TransactionType(raw.get("type", "debit").lower()),
                     account=account_name,
                     source_file=source_name,
                     raw_text=str(raw),
@@ -270,6 +282,7 @@ class PDFIngester:
 
 # ─── Gmail Ingestion ──────────────────────────────────────────────────────────
 
+
 class GmailIngester:
     """
     Fetches bank statement attachments from Gmail via OAuth.
@@ -282,8 +295,12 @@ class GmailIngester:
 
     SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
     STATEMENT_KEYWORDS = [
-        "statement", "bank statement", "credit card statement",
-        "account statement", "e-statement", "monthly statement",
+        "statement",
+        "bank statement",
+        "credit card statement",
+        "account statement",
+        "e-statement",
+        "monthly statement",
     ]
 
     def __init__(self) -> None:
@@ -314,9 +331,7 @@ class GmailIngester:
                         f"Gmail credentials not found at {self._creds_path}. "
                         "Download OAuth credentials.json from Google Cloud Console."
                     )
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    self._creds_path, self.SCOPES
-                )
+                flow = InstalledAppFlow.from_client_secrets_file(self._creds_path, self.SCOPES)
                 creds = flow.run_local_server(port=0)
 
             token_path.parent.mkdir(parents=True, exist_ok=True)
@@ -328,17 +343,14 @@ class GmailIngester:
         """Return message IDs of emails that likely contain statements."""
         query_parts = [f'"{kw}"' for kw in self.STATEMENT_KEYWORDS]
         query = f"({' OR '.join(query_parts)}) has:attachment"
-        result = service.users().messages().list(
-            userId="me", q=query, maxResults=50
-        ).execute()
+        result = service.users().messages().list(userId="me", q=query, maxResults=50).execute()
         return [m["id"] for m in result.get("messages", [])]
 
     def _download_attachment(self, service, message_id: str) -> list[dict[str, Any]]:
         """Download all PDF/CSV attachments from a message."""
         import base64
-        msg = service.users().messages().get(
-            userId="me", id=message_id, format="full"
-        ).execute()
+
+        msg = service.users().messages().get(userId="me", id=message_id, format="full").execute()
         attachments = []
 
         def walk_parts(parts: list) -> None:
@@ -346,20 +358,25 @@ class GmailIngester:
                 filename = part.get("filename", "")
                 mime = part.get("mimeType", "")
                 if filename and (
-                    filename.lower().endswith(".pdf")
-                    or filename.lower().endswith(".csv")
+                    filename.lower().endswith(".pdf") or filename.lower().endswith(".csv")
                 ):
                     att_id = part["body"].get("attachmentId")
                     if att_id:
-                        att = service.users().messages().attachments().get(
-                            userId="me", messageId=message_id, id=att_id
-                        ).execute()
+                        att = (
+                            service.users()
+                            .messages()
+                            .attachments()
+                            .get(userId="me", messageId=message_id, id=att_id)
+                            .execute()
+                        )
                         data = base64.urlsafe_b64decode(att["data"])
-                        attachments.append({
-                            "filename": filename,
-                            "mime": mime,
-                            "data": data,
-                        })
+                        attachments.append(
+                            {
+                                "filename": filename,
+                                "mime": mime,
+                                "data": data,
+                            }
+                        )
                 if "parts" in part:
                     walk_parts(part["parts"])
 
@@ -414,6 +431,7 @@ class GmailIngester:
 
 # ─── LLM Categoriser ─────────────────────────────────────────────────────────
 
+
 class TransactionCategoriser:
     """Bulk-categorises transactions using a fast LLM (Haiku)."""
 
@@ -432,14 +450,21 @@ class TransactionCategoriser:
         for i in range(0, len(transactions), self.BATCH_SIZE):
             batch = transactions[i : i + self.BATCH_SIZE]
             batch_input = [
-                {"id": t.id, "description": t.description, "amount": t.amount, "type": t.transaction_type.value}
+                {
+                    "id": t.id,
+                    "description": t.description,
+                    "amount": t.amount,
+                    "type": t.transaction_type.value,
+                }
                 for t in batch
             ]
             try:
-                response = self._llm.invoke([
-                    SystemMessage(content=CATEGORISATION_SYSTEM),
-                    HumanMessage(content=json.dumps(batch_input, ensure_ascii=False)),
-                ])
+                response = self._llm.invoke(
+                    [
+                        SystemMessage(content=CATEGORISATION_SYSTEM),
+                        HumanMessage(content=json.dumps(batch_input, ensure_ascii=False)),
+                    ]
+                )
                 raw = response.content.strip()
                 raw = re.sub(r"```(?:json)?", "", raw).strip().rstrip("```")
                 categorised: list[dict[str, Any]] = json.loads(raw)
@@ -464,6 +489,7 @@ class TransactionCategoriser:
 
 
 # ─── Investment Goals CSV ─────────────────────────────────────────────────────
+
 
 class InvestmentGoalsLoader:
     """Parses the investment_goals.csv file supplied by the user."""
@@ -491,10 +517,12 @@ Return ONLY a JSON object.""".format(
 
         # Normalise headers
         prompt = self.GOALS_NORMALISE_PROMPT.format(columns=list(df.columns))
-        resp = self._llm.invoke([
-            SystemMessage(content=prompt),
-            HumanMessage(content=str(list(df.columns))),
-        ])
+        resp = self._llm.invoke(
+            [
+                SystemMessage(content=prompt),
+                HumanMessage(content=str(list(df.columns))),
+            ]
+        )
         raw = resp.content.strip()
         raw = re.sub(r"```(?:json)?", "", raw).strip().rstrip("```")
         raw_map: dict[str, str | None] = json.loads(raw)
@@ -524,7 +552,9 @@ Return ONLY a JSON object.""".format(
                     goal_type=goal_type,
                     target_amount=abs(float(row.get(mapping.get("target_amount") or 0, 0))),
                     current_amount=abs(float(row.get(mapping.get("current_amount") or 0, 0) or 0)),
-                    monthly_contribution=abs(float(row.get(mapping.get("monthly_contribution") or 0, 0) or 0)),
+                    monthly_contribution=abs(
+                        float(row.get(mapping.get("monthly_contribution") or 0, 0) or 0)
+                    ),
                     target_date=target_date,
                     priority=int(row.get(mapping.get("priority") or 1, 1) or 1),
                     notes=str(row.get(mapping.get("notes") or "", "") or ""),
@@ -539,6 +569,7 @@ Return ONLY a JSON object.""".format(
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 
+
 def _to_float(val: Any) -> float | None:
     if val is None or (isinstance(val, float) and pd.isna(val)):
         return None
@@ -550,8 +581,16 @@ def _to_float(val: Any) -> float | None:
 
 
 def _parse_date_flexible(val: str) -> date:
-    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%d-%m-%Y",
-                "%d %b %Y", "%d %B %Y", "%b %d, %Y", "%B %d, %Y"):
+    for fmt in (
+        "%Y-%m-%d",
+        "%d/%m/%Y",
+        "%m/%d/%Y",
+        "%d-%m-%Y",
+        "%d %b %Y",
+        "%d %B %Y",
+        "%b %d, %Y",
+        "%B %d, %Y",
+    ):
         try:
             return datetime.strptime(val.strip(), fmt).date()
         except ValueError:

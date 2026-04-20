@@ -15,6 +15,7 @@ Endpoints:
   GET  /goals                — list goals with correlation status
   DELETE /reset              — clear all data for fresh start
 """
+
 from __future__ import annotations
 
 import logging
@@ -39,15 +40,18 @@ logger = logging.getLogger(__name__)
 # ── Lazy-loaded agent (singleton per process) ─────────────────────────────────
 _agent = None
 
+
 def get_agent():
     global _agent
     if _agent is None:
         from src.agents.finance_agent import FinanceCoachAgent
+
         _agent = FinanceCoachAgent()
     return _agent
 
 
 # ── App setup ─────────────────────────────────────────────────────────────────
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -75,6 +79,7 @@ app.add_middleware(
 
 # ── Request/Response models ────────────────────────────────────────────────────
 
+
 class ChatRequest(BaseModel):
     message: str
     session_reset: bool = False
@@ -98,6 +103,7 @@ class GoalIngestResponse(BaseModel):
 
 
 # ── Ingestion endpoints ───────────────────────────────────────────────────────
+
 
 @app.post("/ingest/csv", response_model=IngestResponse, tags=["ingestion"])
 async def ingest_csv(
@@ -228,6 +234,7 @@ async def ingest_goals(file: UploadFile = File(...)):
 
 # ── Chat endpoints ─────────────────────────────────────────────────────────────
 
+
 @app.post("/chat", response_model=ChatResponse, tags=["chat"])
 async def chat(request: ChatRequest):
     """Single-turn conversational Q&A over your financial data."""
@@ -261,6 +268,7 @@ async def chat_stream(request: ChatRequest):
 
 
 # ── Analysis endpoints ────────────────────────────────────────────────────────
+
 
 @app.get("/summary", tags=["analysis"])
 async def get_summary():
@@ -332,7 +340,7 @@ async def list_goals():
 @app.get("/stats", tags=["analysis"])
 async def get_stats():
     """Quick stats about loaded data."""
-    from src.memory.vector_store import FinanceVectorStore, COLLECTION_TRANSACTIONS
+    from src.memory.vector_store import COLLECTION_TRANSACTIONS, FinanceVectorStore
 
     agent = get_agent()
     store = FinanceVectorStore()
@@ -355,6 +363,7 @@ async def reset_all():
 
 # ── Health check ──────────────────────────────────────────────────────────────
 
+
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "finance-coach-agent"}
@@ -362,6 +371,7 @@ async def health():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
         "src.api.main:app",
         host=os.getenv("APP_HOST", "0.0.0.0"),

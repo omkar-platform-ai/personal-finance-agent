@@ -18,12 +18,13 @@ The agent can:
   3. Give budget advice ("Am I on track for my emergency fund?")
   4. Spot anomalies ("What were my biggest unexpected expenses?")
 """
+
 from __future__ import annotations
 
-import json
 import logging
 import operator
-from typing import Annotated, Any, AsyncGenerator, TypedDict
+from collections.abc import AsyncGenerator
+from typing import Annotated, Any, TypedDict
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langgraph.graph import END, StateGraph
@@ -31,11 +32,12 @@ from langgraph.graph import END, StateGraph
 from src.agents.analyser import FinancialAnalyser
 from src.llm import get_reasoning_llm
 from src.memory.vector_store import FinanceVectorStore
-from src.models import AgentState, FinancialSummary, InvestmentGoal, Transaction
+from src.models import FinancialSummary, InvestmentGoal, Transaction
 
 logger = logging.getLogger(__name__)
 
 # ─── LangGraph State ──────────────────────────────────────────────────────────
+
 
 class GraphState(TypedDict):
     messages: Annotated[list[dict[str, str]], operator.add]
@@ -46,7 +48,7 @@ class GraphState(TypedDict):
     retrieved_context: str
     final_answer: str
     error: str | None
-    route: str   # "retrieval" | "analysis" | "direct"
+    route: str  # "retrieval" | "analysis" | "direct"
 
 
 # ─── System Prompt ─────────────────────────────────────────────────────────────
@@ -69,17 +71,33 @@ Tone: Professional but warm. Like a trusted CFP who also knows tech."""
 
 # ─── Node Functions ───────────────────────────────────────────────────────────
 
+
 def route_query(state: GraphState) -> GraphState:
     """Decide whether query needs retrieval, full analysis, or direct answer."""
     query = state["current_query"].lower()
 
     analysis_triggers = [
-        "summary", "analysis", "report", "overview", "breakdown",
-        "goals", "investment", "savings rate", "how am i doing",
+        "summary",
+        "analysis",
+        "report",
+        "overview",
+        "breakdown",
+        "goals",
+        "investment",
+        "savings rate",
+        "how am i doing",
     ]
     retrieval_triggers = [
-        "how much", "what did i", "show me", "list", "find",
-        "when did", "which", "top", "biggest", "most",
+        "how much",
+        "what did i",
+        "show me",
+        "list",
+        "find",
+        "when did",
+        "which",
+        "top",
+        "biggest",
+        "most",
     ]
 
     if any(t in query for t in analysis_triggers):
@@ -160,7 +178,9 @@ def retrieval_node(state: GraphState) -> GraphState:
                 f"({g.progress_pct:.1f}%) — Monthly planned: ₹{g.monthly_contribution:,.0f}"
             )
 
-    retrieved_context = "\n".join(context_parts) if context_parts else "No transaction data loaded yet."
+    retrieved_context = (
+        "\n".join(context_parts) if context_parts else "No transaction data loaded yet."
+    )
 
     return {**state, "retrieved_context": retrieved_context}
 
@@ -171,7 +191,10 @@ def analysis_node(state: GraphState) -> GraphState:
     goals = state.get("goals", [])
 
     if not transactions:
-        return {**state, "retrieved_context": "No transactions loaded. Please upload a bank statement first."}
+        return {
+            **state,
+            "retrieved_context": "No transactions loaded. Please upload a bank statement first.",
+        }
 
     analyser = FinancialAnalyser()
     summary = analyser.generate_summary(transactions, goals)
@@ -194,7 +217,9 @@ def analysis_node(state: GraphState) -> GraphState:
     if summary.insights:
         context_parts.append("\n=== KEY INSIGHTS ===")
         for insight in summary.insights:
-            context_parts.append(f"• [{insight.impact.upper()}] {insight.title}: {insight.description}")
+            context_parts.append(
+                f"• [{insight.impact.upper()}] {insight.title}: {insight.description}"
+            )
             if insight.action:
                 context_parts.append(f"  → Action: {insight.action}")
 
@@ -234,14 +259,18 @@ def generate_answer_node(state: GraphState) -> GraphState:
             messages.append(AIMessage(content=msg["content"]))
 
     # Current query with context
-    messages.append(HumanMessage(content=f"""
+    messages.append(
+        HumanMessage(
+            content=f"""
 Context from your financial data:
 {context}
 
 User question: {query}
 
 Please provide a helpful, specific answer grounded in the data above.
-Use ₹ for amounts. Be actionable and encouraging."""))
+Use ₹ for amounts. Be actionable and encouraging."""
+        )
+    )
 
     response = llm.invoke(messages)
     answer = response.content
@@ -274,6 +303,7 @@ def route_condition(state: GraphState) -> str:
 
 # ─── Build Graph ──────────────────────────────────────────────────────────────
 
+
 def build_finance_graph() -> Any:
     """Build and compile the LangGraph finance agent."""
     graph = StateGraph(GraphState)
@@ -302,6 +332,7 @@ def build_finance_graph() -> Any:
 
 
 # ─── Agent Class ──────────────────────────────────────────────────────────────
+
 
 class FinanceCoachAgent:
     """
@@ -359,7 +390,7 @@ class FinanceCoachAgent:
 
     async def stream_chat(self, user_message: str) -> AsyncGenerator[str, None]:
         """Async streaming chat response."""
-        from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
+        from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
         llm = get_reasoning_llm()
 
@@ -390,13 +421,17 @@ class FinanceCoachAgent:
             else:
                 messages.append(AIMessage(content=msg["content"]))
 
-        messages.append(HumanMessage(content=f"""
+        messages.append(
+            HumanMessage(
+                content=f"""
 Context from your financial data:
 {context}
 
 User question: {user_message}
 
-Please provide a helpful, specific answer grounded in the data above."""))
+Please provide a helpful, specific answer grounded in the data above."""
+            )
+        )
 
         full_answer = ""
         async for chunk in llm.astream(messages):

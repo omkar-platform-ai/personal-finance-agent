@@ -12,6 +12,7 @@ Imported (and invoked) at the top of ``src/memory/vector_store.py`` so every
 entry point — API server, demo, CLI, tests — gets a quiet runtime without
 having to remember to call it.
 """
+
 from __future__ import annotations
 
 import logging
@@ -34,6 +35,7 @@ def silence_noisy_libraries() -> None:
     # in a way that message-pattern filters miss.
     try:
         from langchain_core._api.deprecation import LangChainDeprecationWarning
+
         warnings.filterwarnings("ignore", category=LangChainDeprecationWarning)
     except ImportError:
         warnings.filterwarnings(
@@ -49,6 +51,7 @@ def silence_noisy_libraries() -> None:
     # all-MiniLM-L6-v2). Lower its verbosity to error.
     try:
         from transformers import logging as hf_logging
+
         hf_logging.set_verbosity_error()
         hf_logging.disable_progress_bar()
     except ImportError:
