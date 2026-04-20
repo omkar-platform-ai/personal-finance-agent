@@ -52,6 +52,7 @@ dev = [
     "ruff>=0.7.0",
     "mypy>=1.12.0",
     "httpx>=0.27.0",
+    "python-semantic-release>=9.15.0",
 ]
 
 [build-system]
@@ -78,3 +79,34 @@ addopts = "-v --tb=short"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src"]
+
+# ── Release automation (python-semantic-release) ────────────────────────────────
+[tool.semantic_release]
+version_toml = ["pyproject.toml:project.version"]
+tag_format = "v{version}"
+major_on_zero = false
+allow_zero_version = true
+build_command = ""
+commit_message = "chore(release): v{version} [skip ci]\n\n{changelog}"
+commit_author = "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
+
+[tool.semantic_release.branches.main]
+match = "(main|master)"
+prerelease = false
+
+[tool.semantic_release.changelog]
+changelog_file = "CHANGELOG.md"
+exclude_commit_patterns = [
+    '''^chore\(release\):.*''',
+    '''^Merge pull request.*''',
+    '''^Merge branch.*''',
+]
+
+[tool.semantic_release.commit_parser_options]
+allowed_tags = ["feat", "fix", "perf", "docs", "chore", "refactor", "test", "ci", "build", "style"]
+minor_tags = ["feat"]
+patch_tags = ["fix", "perf"]
+default_bump_level = 0
+
+[tool.semantic_release.remote]
+type = "github"

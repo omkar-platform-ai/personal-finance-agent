@@ -1,4 +1,4 @@
-.PHONY: install dev check-server test test-fast lint lint-fix demo cli cli-sample auth-local auth-check vertex-check docker-build docker-up docker-down ingest-sample ingest-goals summary chat reset clean
+.PHONY: install dev check-server test test-fast lint lint-fix demo cli cli-sample auth-local auth-check vertex-check docker-build docker-up docker-down ingest-sample ingest-goals summary chat reset clean release-dry release-local version-current changelog-preview setup-commit-template
 
 install:
 	uv sync
@@ -77,6 +77,38 @@ chat: check-server
 
 reset: check-server
 	curl -s -X DELETE http://localhost:8000/reset | uv run python3 -m json.tool
+
+# ── Release automation ─────────────────────────────────────────────────────────
+# Policy + workflow: docs/RELEASING.md
+# All releases are normally performed by .github/workflows/release.yml.
+# These targets are for local preview / emergency manual releases only.
+
+version-current:
+	@uv run semantic-release version --print-last-released
+
+release-dry:
+	@echo "→ Next version (based on commits since last tag):"
+	uv run semantic-release version --print --no-commit --no-tag --no-push --no-vcs-release
+	@echo ""
+	@echo "→ CHANGELOG entry preview:"
+	uv run semantic-release changelog --print
+
+changelog-preview:
+	uv run semantic-release changelog --print
+
+release-local:
+	@if [ -z "$$GH_TOKEN" ] && [ -z "$$GITHUB_TOKEN" ]; then \
+	  echo "ERROR: GH_TOKEN or GITHUB_TOKEN must be set for a local release."; \
+	  echo "  export GH_TOKEN=\$$(gh auth token)"; \
+	  exit 1; \
+	fi
+	@echo "⚠  Running a local release. This commits, tags, and pushes to main."
+	uv run semantic-release version
+	uv run semantic-release publish
+
+setup-commit-template:
+	git config commit.template .gitmessage
+	@echo "✓ Commit template enabled. Every 'git commit' will now open .gitmessage."
 
 # ── Cleanup ────────────────────────────────────────────────────────────────────
 clean:

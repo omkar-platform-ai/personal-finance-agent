@@ -1,0 +1,27 @@
+# <type>(<scope>): <short summary>
+#   │      │            │
+#   │      │            └── Summary, present tense, no period at end, ≤72 chars
+#   │      │
+#   │      └── Scope (optional): api, ingestion, agent, analyser, llm, models,
+#   │                            vector-store, cli, docker, docs, deps, ci
+#   │
+#   └── Type: feat | fix | perf | docs | chore | refactor | test | ci | build | style
+#
+# ─── Release impact ────────────────────────────────────────────────────────────
+#   feat      → MINOR bump (new capability)
+#   fix       → PATCH bump
+#   perf      → PATCH bump
+#   others    → no release
+#
+# ─── Breaking changes ──────────────────────────────────────────────────────────
+#   Add ! after the type/scope, or include BREAKING CHANGE: footer.
+#     feat(api)!: rename /chat endpoint to /ask
+#
+# ─── Examples ──────────────────────────────────────────────────────────────────
+#   feat(ingestion): add currency field to Transaction model
+#   fix(agent): strip markdown fences from goal CSV LLM response
+#   perf(vector-store): filter metadata before embedding search
+#   chore(deps): bump langgraph to 0.3.0
+#   feat(api)!: rename /chat endpoint to /ask
+#
+# Full policy: docs/RELEASING.md
