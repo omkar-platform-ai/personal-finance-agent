@@ -96,7 +96,7 @@ tag_format = "v{version}"
 major_on_zero = false
 allow_zero_version = true
 build_command = ""
-commit_message = "chore(release): v{version} [skip ci]\n\n{changelog}"
+commit_message = "chore(release): v{version} [skip ci]"
 commit_author = "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
 
 [tool.semantic_release.branches.main]
